@@ -1,0 +1,6 @@
+[submodule "subprojects/glm"]
+	path = subprojects/glm
+	url = git@github.com:g-truc/glm.git
+[submodule "subprojects/SDL"]
+	path = subprojects/SDL
+	url = git@github.com:libsdl-org/SDL.git
