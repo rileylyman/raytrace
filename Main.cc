@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <vector>
 
 #include "Math.h"
@@ -40,17 +41,30 @@ int main(void) {
         math::RaySphereIntersection isect =
             math::RaySphereIntersect(ray, sphere);
         if (isect.n == 1 && isect.t1 > 0) {
+          math::Vec3<float> isect_point = ray.origin + ray.direction * isect.t1;
+          math::Vec3<float> normal =
+              glm::normalize(glm::max(isect_point, sphere.origin) -
+                             glm::min(isect_point, sphere.origin));
+          math::Vec4<float> normal_color =
+              math::Vec4<float>(normal.x, normal.y, normal.z, 1.0);
           final_color =
-              final_color + sphere_color / static_cast<float>(kNumSamples);
+              final_color + normal_color / static_cast<float>(kNumSamples);
         } else if (isect.n == 2 && (isect.t1 > 0 || isect.t2 > 0)) {
+          math::Vec3<float> isect_point =
+              ray.origin + ray.direction * glm::min(isect.t1, isect.t2);
+          math::Vec3<float> normal =
+              glm::normalize(glm::max(isect_point, sphere.origin) -
+                             glm::min(isect_point, sphere.origin));
+          math::Vec4<float> normal_color =
+              math::Vec4<float>(normal.x, normal.y, normal.z, 1.0);
           final_color =
-              final_color + sphere_color / static_cast<float>(kNumSamples);
+              final_color + normal_color / static_cast<float>(kNumSamples);
         } else {
           final_color =
               final_color + clear_color / static_cast<float>(kNumSamples);
         }
-        sdl::SetPixel({x, y}, final_color);
       }
+      sdl::SetPixel({x, y}, final_color);
     }
   }
 
