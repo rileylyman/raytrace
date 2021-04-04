@@ -7,7 +7,7 @@
 
 namespace sdl {
 
-constexpr uint16_t kWindowWidth = 600;
+constexpr uint16_t kWindowWidth = 1000;
 constexpr uint16_t kWindowHeight = 600;
 
 enum class EventType {

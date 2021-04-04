@@ -7,7 +7,7 @@ SDL_Window* window;
 
 void Initialize() {
   SDL_Init(SDL_INIT_VIDEO);
-  SDL_CreateWindowAndRenderer(kWindowHeight, kWindowWidth, 0, &window,
+  SDL_CreateWindowAndRenderer(kWindowWidth, kWindowHeight, 0, &window,
                               &renderer);
 }
 

@@ -12,13 +12,13 @@ constexpr float kPi = 3.1415;
 
 struct Camera {
   Camera()
-      : hfov(45),
-        vfov(45),
-        position{0, 0, -45},
-        forward{0, 0, -1},
-        up{0, 1, 0} {}
+      : fov_degrees(60), position{0, 0, -100}, forward{0, 0, 1}, up{0, 1, 0} {
+    aspect_ratio = static_cast<float>(sdl::kWindowHeight) /
+                   static_cast<float>(sdl::kWindowWidth);
+  }
 
-  float hfov, vfov;
+  float fov_degrees;
+  float aspect_ratio;
   Vec3<float> position;
   Vec3<float> forward;
   Vec3<float> up;
@@ -26,7 +26,7 @@ struct Camera {
 
 Mat4x4<float> WorldToCamera(Camera camera) {
   return glm::lookAt(camera.position,
-                     glm::normalize(camera.position - camera.forward),
+                     glm::normalize(camera.position + camera.forward),
                      camera.up);
 }
 
@@ -35,7 +35,8 @@ Mat4x4<float> CameraToWorld(Camera camera) {
 }
 
 Vec2<float> GetPlaneDimensions(Camera camera) {
-  return {tan(camera.hfov), tan(camera.vfov)};
+  float xdim = abs(2 * tan(glm::radians(camera.fov_degrees / 2)));
+  return {xdim, xdim * camera.aspect_ratio};
 }
 
 Ray GetWorldSpaceRayFromImageSpace(Camera camera, Vec2<float> pixel_pos) {
@@ -111,6 +112,9 @@ int main(void) {
         }
       }
       sdl::SetPixel({x, y}, final_color);
+    }
+    if (x % 4 == 0) {
+      sdl::Show();
     }
   }
 
