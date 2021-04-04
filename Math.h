@@ -57,7 +57,6 @@ Intersection RaySphereIntersect(const Ray& ray, const Sphere& sphere);
 
 Intersection RayPlaneIntersect(const Ray& ray, const Plane& plane);
 
-Intersection RayTriangleIntersect(const Ray& ray,
-                                             const Triangle& tri);
+Intersection RayTriangleIntersect(const Ray& ray, const Triangle& tri);
 
 }  // namespace math

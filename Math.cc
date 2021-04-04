@@ -47,6 +47,7 @@ Intersection RayPlaneIntersect(const Ray& ray, const Plane& plane) {
     isect.isect_point = ray.origin + ray.direction * isect.t;
     isect.isect_normal = plane.normal;
   }
+  return isect;
 }
 
 Intersection RayTriangleIntersect(const Ray& ray, const Triangle& tri) {

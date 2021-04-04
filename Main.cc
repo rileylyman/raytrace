@@ -60,6 +60,26 @@ struct Scene {
   Camera camera;
 };
 
+struct SceneIntersection {
+  Intersection isect;
+  Object* object;
+};
+
+SceneIntersection RaySceneIntersect(const Ray& ray, const Scene& scene) {
+  SceneIntersection scene_isect;
+  scene_isect.isect.valid = false;
+  float smallest_t = std::numeric_limits<float>::max();
+  for (const Object& object : scene.objects) {
+    Intersection curr_isect = RayObjectIntersect(ray, object);
+    if (curr_isect.valid && smallest_t > curr_isect.t) {
+      smallest_t = curr_isect.t;
+      scene_isect.isect = curr_isect;
+      scene_isect.object = const_cast<Object*>(&object);
+    }
+  }
+  return scene_isect;
+}
+
 int main(void) {
   math::Vec4<float> clear_color = {0.2, 0.3, 0.35, 1};
   math::Vec4<float> sphere_color = {.8, .4, .2, 1};
@@ -68,7 +88,6 @@ int main(void) {
   sdl::ClearScreen({0, 0, 0, 1});
 
   Camera camera;
-  math::Sphere sphere({0, 0, 0}, 20);
   Scene scene;
   scene.camera = camera;
   scene.objects = {
@@ -88,8 +107,8 @@ int main(void) {
        true,
        {0, 1, 0, 1},
        {
-           {{-25, 74, 0}, {-25, 74, -25}, {25, 74, 0}},
-           {{25, 74, 0}, {-25, 74, -25}, {25, 74, -25}},
+           {{-25, 74, -25}, {-25, 74, -50}, {25, 74, -25}},
+           {{25, 74, -25}, {-25, 74, -50}, {25, 74, -50}},
        }},
       // roof
       {ObjectType::kTriangleMesh,
@@ -120,51 +139,32 @@ int main(void) {
        false,
        {0, 1, 0, 1},
        {
-         {{-75, 0, -75}, {-75, 75, -75}, {75, 75, -75}},
-       {{-75, 0, -75}, {75, 0, -75}, {75, 75, -75}},
+           {{-75, 0, -75}, {-75, 75, -75}, {75, 75, -75}},
+           {{-75, 0, -75}, {75, 0, -75}, {75, 75, -75}},
        }},
   };
 
   for (uint16_t x = 0; x < sdl::kWindowWidth; x++) {
     for (uint16_t y = 0; y < sdl::kWindowHeight; y++) {
-      constexpr uint32_t kNumSamples = 4;
-      math::Vec4<float> final_color = {0, 0, 0, 0};
-      for (uint16_t sample = 0; sample < kNumSamples; sample++) {
-        Ray ray = GetWorldSpaceRayFromImageSpace(
-            camera, {static_cast<float>(x) / sdl::kWindowWidth,
-                     static_cast<float>(y) / sdl::kWindowHeight});
+      Ray ray = GetWorldSpaceRayFromImageSpace(
+          camera, {static_cast<float>(x) / sdl::kWindowWidth,
+                   static_cast<float>(y) / sdl::kWindowHeight});
 
-        Intersection isect;
-        isect.valid = false;
-        bool is_emissive = false;
-        float smallest_t = std::numeric_limits<float>::max();
-        Vec3<float> normal;
-        for (const Object& object : scene.objects) {
-          Intersection curr_isect = RayObjectIntersect(ray, object);
-          if (curr_isect.valid && smallest_t > curr_isect.t) {
-            smallest_t = curr_isect.t;
-            isect = curr_isect;
-            is_emissive = object.is_emissive;
-          }
-        }
+      SceneIntersection scene_isect = RaySceneIntersect(ray, scene);
 
-        if (isect.valid) {
-          if (is_emissive) {
-            final_color = final_color + Vec4<float>{1, 1, 1, 1} /
-                                            static_cast<float>(kNumSamples);
-          } else {
-            math::Vec4<float> normal_color =
-                math::Vec4<float>(isect.isect_normal.x, isect.isect_normal.y,
-                                  isect.isect_normal.z, 1.0);
-            final_color =
-                final_color + normal_color / static_cast<float>(kNumSamples);
-          }
+      if (scene_isect.isect.valid) {
+        if (scene_isect.object->is_emissive) {
+          sdl::SetPixel({x, y}, {1, 1, 1, 1});
         } else {
-          final_color =
-              final_color + clear_color / static_cast<float>(kNumSamples);
+          math::Vec4<float> normal_color =
+              math::Vec4<float>(scene_isect.isect.isect_normal.x,
+                                scene_isect.isect.isect_normal.y,
+                                scene_isect.isect.isect_normal.z, 1.0);
+          sdl::SetPixel({x, y}, normal_color);
         }
+      } else {
+        sdl::SetPixel({x, y}, clear_color);
       }
-      sdl::SetPixel({x, y}, final_color);
     }
     if (x % 4 == 0) {
       sdl::Show();
