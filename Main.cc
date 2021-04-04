@@ -79,47 +79,50 @@ int main(void) {
       {ObjectType::kTriangleMesh,
        false,
        {0, 1, 0, 1},
-       {{{-75, 0, 0}, {-75, 0, -75}, {75, 0, 0}}}},
+       {
+           {{-75, 0, 0}, {-75, 0, -75}, {75, 0, 0}},
+           {{75, 0, 0}, {-75, 0, -75}, {75, 0, -75}},
+       }},
+      // light
       {ObjectType::kTriangleMesh,
-       false,
+       true,
        {0, 1, 0, 1},
-       {{{75, 0, 0}, {-75, 0, -75}, {75, 0, -75}}}},
+       {
+           {{-25, 74, 0}, {-25, 74, -25}, {25, 74, 0}},
+           {{25, 74, 0}, {-25, 74, -25}, {25, 74, -25}},
+       }},
       // roof
       {ObjectType::kTriangleMesh,
        false,
        {0, 1, 0, 1},
-       {{{-75, 75, 0}, {-75, 75, -75}, {75, 75, 0}}}},
-      {ObjectType::kTriangleMesh,
-       false,
-       {0, 1, 0, 1},
-       {{{75, 75, 0}, {-75, 75, -75}, {75, 75, -75}}}},
+       {
+           {{-75, 75, 0}, {-75, 75, -75}, {75, 75, 0}},
+           {{75, 75, 0}, {-75, 75, -75}, {75, 75, -75}},
+       }},
       // left wall
       {ObjectType::kTriangleMesh,
        false,
        {0, 1, 0, 1},
-       {{{-75, 0, 0}, {-75, 75, 0}, {-75, 75, -75}}}},
-      {ObjectType::kTriangleMesh,
-       false,
-       {0, 1, 0, 1},
-       {{{-75, 0, 0}, {-75, 0, -75}, {-75, 75, -75}}}},
+       {
+           {{-75, 0, 0}, {-75, 75, 0}, {-75, 75, -75}},
+           {{-75, 0, 0}, {-75, 0, -75}, {-75, 75, -75}},
+       }},
       // right wall
       {ObjectType::kTriangleMesh,
        false,
        {0, 1, 0, 1},
-       {{{75, 0, 0}, {75, 75, 0}, {75, 75, -75}}}},
-      {ObjectType::kTriangleMesh,
-       false,
-       {0, 1, 0, 1},
-       {{{75, 0, 0}, {75, 0, -75}, {75, 75, -75}}}},
+       {
+           {{75, 0, 0}, {75, 75, 0}, {75, 75, -75}},
+           {{75, 0, 0}, {75, 0, -75}, {75, 75, -75}},
+       }},
       // back wall
       {ObjectType::kTriangleMesh,
        false,
        {0, 1, 0, 1},
-       {{{-75, 0, -75}, {-75, 75, -75}, {75, 75, -75}}}},
-      {ObjectType::kTriangleMesh,
-       false,
-       {0, 1, 0, 1},
-       {{{-75, 0, -75}, {75, 0, -75}, {75, 75, -75}}}},
+       {
+         {{-75, 0, -75}, {-75, 75, -75}, {75, 75, -75}},
+       {{-75, 0, -75}, {75, 0, -75}, {75, 75, -75}},
+       }},
   };
 
   for (uint16_t x = 0; x < sdl::kWindowWidth; x++) {
@@ -133,6 +136,7 @@ int main(void) {
 
         Intersection isect;
         isect.valid = false;
+        bool is_emissive = false;
         float smallest_t = std::numeric_limits<float>::max();
         Vec3<float> normal;
         for (const Object& object : scene.objects) {
@@ -140,15 +144,21 @@ int main(void) {
           if (curr_isect.valid && smallest_t > curr_isect.t) {
             smallest_t = curr_isect.t;
             isect = curr_isect;
+            is_emissive = object.is_emissive;
           }
         }
 
         if (isect.valid) {
-          math::Vec4<float> normal_color =
-              math::Vec4<float>(isect.isect_normal.x, isect.isect_normal.y,
-                                isect.isect_normal.z, 1.0);
-          final_color =
-              final_color + normal_color / static_cast<float>(kNumSamples);
+          if (is_emissive) {
+            final_color = final_color + Vec4<float>{1, 1, 1, 1} /
+                                            static_cast<float>(kNumSamples);
+          } else {
+            math::Vec4<float> normal_color =
+                math::Vec4<float>(isect.isect_normal.x, isect.isect_normal.y,
+                                  isect.isect_normal.z, 1.0);
+            final_color =
+                final_color + normal_color / static_cast<float>(kNumSamples);
+          }
         } else {
           final_color =
               final_color + clear_color / static_cast<float>(kNumSamples);
