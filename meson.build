@@ -10,6 +10,7 @@ glm_dep = glm_subproj.dependency('glm')
 
 sources = [
   'Main.cc',
+  'Object.cc',
   'Math.cc',
   'Sdl.cc',
   ]

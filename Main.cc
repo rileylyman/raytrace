@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Math.h"
+#include "Object.h"
 #include "Sdl.h"
 
 using namespace math;
@@ -55,8 +56,7 @@ Ray GetWorldSpaceRayFromImageSpace(Camera camera, Vec2<float> pixel_pos) {
 }
 
 struct Scene {
-  std::vector<math::Sphere> spheres;
-  std::vector<math::Triangle> triangles;
+  std::vector<Object> objects;
   Camera camera;
 };
 
@@ -71,29 +71,55 @@ int main(void) {
   math::Sphere sphere({0, 0, 0}, 20);
   Scene scene;
   scene.camera = camera;
-  scene.spheres = {
-      // {{0, 30, -20}, 20}, {{-20, 30, -40}, 15}, {{20, 30, -40}, 15},
-      // {{0, 50, -50}, 15}, {{0, 10, -50}, 15},
-      {{30, 15, -20}, 20},
-      {{-30, 15, -30}, 20},
-      {{-75, 75, -75}, 20},
-  };
-  scene.triangles = {
+  scene.objects = {
+      {ObjectType::kSphere, false, {1, 0, 0, 1}, {{30, 15, -20}, 20}},
+      {ObjectType::kSphere, false, {1, 0, 0, 1}, {{-30, 15, -30}, 20}},
+      {ObjectType::kSphere, false, {1, 0, 0, 1}, {{-75, 75, -75}, 20}},
       // floor
-      {{-75, 0, 0}, {-75, 0, -75}, {75, 0, 0}},
-      {{75, 0, 0}, {-75, 0, -75}, {75, 0, -75}},
+      {ObjectType::kTriangleMesh,
+       false,
+       {0, 1, 0, 1},
+       {{{-75, 0, 0}, {-75, 0, -75}, {75, 0, 0}}}},
+      {ObjectType::kTriangleMesh,
+       false,
+       {0, 1, 0, 1},
+       {{{75, 0, 0}, {-75, 0, -75}, {75, 0, -75}}}},
       // roof
-      {{-75, 75, 0}, {-75, 75, -75}, {75, 75, 0}},
-      {{75, 75, 0}, {-75, 75, -75}, {75, 75, -75}},
+      {ObjectType::kTriangleMesh,
+       false,
+       {0, 1, 0, 1},
+       {{{-75, 75, 0}, {-75, 75, -75}, {75, 75, 0}}}},
+      {ObjectType::kTriangleMesh,
+       false,
+       {0, 1, 0, 1},
+       {{{75, 75, 0}, {-75, 75, -75}, {75, 75, -75}}}},
       // left wall
-      {{-75, 0, 0}, {-75, 75, 0}, {-75, 75, -75}},
-      {{-75, 0, 0}, {-75, 0, -75}, {-75, 75, -75}},
+      {ObjectType::kTriangleMesh,
+       false,
+       {0, 1, 0, 1},
+       {{{-75, 0, 0}, {-75, 75, 0}, {-75, 75, -75}}}},
+      {ObjectType::kTriangleMesh,
+       false,
+       {0, 1, 0, 1},
+       {{{-75, 0, 0}, {-75, 0, -75}, {-75, 75, -75}}}},
       // right wall
-      {{75, 0, 0}, {75, 75, 0}, {75, 75, -75}},
-      {{75, 0, 0}, {75, 0, -75}, {75, 75, -75}},
+      {ObjectType::kTriangleMesh,
+       false,
+       {0, 1, 0, 1},
+       {{{75, 0, 0}, {75, 75, 0}, {75, 75, -75}}}},
+      {ObjectType::kTriangleMesh,
+       false,
+       {0, 1, 0, 1},
+       {{{75, 0, 0}, {75, 0, -75}, {75, 75, -75}}}},
       // back wall
-      {{-75, 0, -75}, {-75, 75, -75}, {75, 75, -75}},
-      {{-75, 0, -75}, {75, 0, -75}, {75, 75, -75}},
+      {ObjectType::kTriangleMesh,
+       false,
+       {0, 1, 0, 1},
+       {{{-75, 0, -75}, {-75, 75, -75}, {75, 75, -75}}}},
+      {ObjectType::kTriangleMesh,
+       false,
+       {0, 1, 0, 1},
+       {{{-75, 0, -75}, {75, 0, -75}, {75, 75, -75}}}},
   };
 
   for (uint16_t x = 0; x < sdl::kWindowWidth; x++) {
@@ -105,50 +131,22 @@ int main(void) {
             camera, {static_cast<float>(x) / sdl::kWindowWidth,
                      static_cast<float>(y) / sdl::kWindowHeight});
 
-        const Sphere* isected_sphere = nullptr;
-        const Triangle* isected_triangle = nullptr;
+        Intersection isect;
+        isect.valid = false;
         float smallest_t = std::numeric_limits<float>::max();
         Vec3<float> normal;
-        for (const Sphere& sphere : scene.spheres) {
-          math::RaySphereIntersection isect =
-              math::RaySphereIntersect(ray, sphere);
-          if (isect.n == 1) {
-            if (smallest_t > isect.t1) {
-              smallest_t = isect.t1;
-              isected_sphere = &sphere;
-              isected_triangle = nullptr;
-            }
-          } else if (isect.n == 2) {
-            if (smallest_t > isect.t1 || smallest_t > isect.t2) {
-              smallest_t = glm::min(isect.t1, isect.t2);
-              isected_sphere = &sphere;
-              isected_triangle = nullptr;
-            }
-          }
-        }
-        for (const Triangle& triangle : scene.triangles) {
-          RayTriangleIntersection isect = RayTriangleIntersect(ray, triangle);
-          if (isect.success && smallest_t > isect.t && isect.t > 0) {
-            smallest_t = isect.t;
-            isected_sphere = nullptr;
-            isected_triangle = &triangle;
-            normal = isect.normal;
+        for (const Object& object : scene.objects) {
+          Intersection curr_isect = RayObjectIntersect(ray, object);
+          if (curr_isect.valid && smallest_t > curr_isect.t) {
+            smallest_t = curr_isect.t;
+            isect = curr_isect;
           }
         }
 
-        if (isected_sphere != nullptr) {
-          math::Vec3<float> isect_point =
-              ray.origin + ray.direction * smallest_t;
-          math::Vec3<float> normal =
-              glm::normalize(glm::max(isect_point, isected_sphere->origin) -
-                             glm::min(isect_point, isected_sphere->origin));
+        if (isect.valid) {
           math::Vec4<float> normal_color =
-              math::Vec4<float>(normal.x, normal.y, normal.z, 1.0);
-          final_color =
-              final_color + normal_color / static_cast<float>(kNumSamples);
-        } else if (isected_triangle != nullptr) {
-          math::Vec4<float> normal_color =
-              math::Vec4<float>(normal.x, normal.y, normal.z, 1.0);
+              math::Vec4<float>(isect.isect_normal.x, isect.isect_normal.y,
+                                isect.isect_normal.z, 1.0);
           final_color =
               final_color + normal_color / static_cast<float>(kNumSamples);
         } else {

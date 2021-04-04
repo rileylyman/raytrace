@@ -46,23 +46,18 @@ struct Triangle {
   Vec3<float> p0, p1, p2;
 };
 
-struct RaySphereIntersection {
-  uint8_t n;
-  float t1, t2;
-};
-
-struct RayTriangleIntersection {
-  bool success;
+struct Intersection {
+  bool valid;
   float t;
-  Vec3<float> p;
-  Vec3<float> normal;
+  Vec3<float> isect_point;
+  Vec3<float> isect_normal;
 };
 
-RaySphereIntersection RaySphereIntersect(const Ray& ray, const Sphere& sphere);
+Intersection RaySphereIntersect(const Ray& ray, const Sphere& sphere);
 
-float RayPlaneIntersect(const Ray& ray, const Plane& plane);
+Intersection RayPlaneIntersect(const Ray& ray, const Plane& plane);
 
-RayTriangleIntersection RayTriangleIntersect(const Ray& ray,
+Intersection RayTriangleIntersect(const Ray& ray,
                                              const Triangle& tri);
 
 }  // namespace math
