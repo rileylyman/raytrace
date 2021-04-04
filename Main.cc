@@ -6,8 +6,58 @@
 #include "Math.h"
 #include "Sdl.h"
 
+using namespace math;
+
+constexpr float kPi = 3.1415;
+
+struct Camera {
+  Camera()
+      : hfov(45),
+        vfov(45),
+        position{0, 0, -45},
+        forward{0, 0, -1},
+        up{0, 1, 0} {}
+
+  float hfov, vfov;
+  Vec3<float> position;
+  Vec3<float> forward;
+  Vec3<float> up;
+};
+
+Mat4x4<float> WorldToCamera(Camera camera) {
+  return glm::lookAt(camera.position,
+                     glm::normalize(camera.position - camera.forward),
+                     camera.up);
+}
+
+Mat4x4<float> CameraToWorld(Camera camera) {
+  return glm::inverse(WorldToCamera(camera));
+}
+
+Vec2<float> GetPlaneDimensions(Camera camera) {
+  return {tan(camera.hfov), tan(camera.vfov)};
+}
+
+Ray GetWorldSpaceRayFromImageSpace(Camera camera, Vec2<float> pixel_pos) {
+  Vec2<float> camera_space_plane_dimensions = GetPlaneDimensions(camera);
+  Vec3<float> camera_space_plane_position = {0, 0, -1};
+
+  Vec4<float> camera_space_endpoint = {
+      (pixel_pos.x - 0.5) * camera_space_plane_dimensions.x,
+      (pixel_pos.y - 0.5) * camera_space_plane_dimensions.y,
+      camera_space_plane_position.z, 1};
+
+  Vec4<float> world_space_endpoint =
+      CameraToWorld(camera) * camera_space_endpoint;
+  Vec3<float> world_space_direction =
+      glm::normalize(Vec3<float>(world_space_endpoint) - camera.position);
+
+  return Ray(camera.position, world_space_direction);
+}
+
 struct Scene {
   std::vector<math::Sphere> spheres;
+  Camera camera;
 };
 
 int main(void) {
@@ -17,6 +67,7 @@ int main(void) {
   sdl::Initialize();
   sdl::ClearScreen(clear_color);
 
+  Camera camera;
   math::Sphere sphere({0, 0, 0}, 20);
   math::Vec3<float> camera_pos = {0, 0, -200};
   math::Vec3<float> view_plane_pos = {0, 0, -90};
@@ -30,14 +81,9 @@ int main(void) {
       constexpr uint32_t kNumSamples = 4;
       math::Vec4<float> final_color = {0, 0, 0, 0};
       for (uint16_t sample = 0; sample < kNumSamples; sample++) {
-        math::Vec3<float> plane_point = view_plane_pos;
-        plane_point.x += (static_cast<float>(x) / sdl::kWindowWidth - 0.5) *
-                             view_plane_dims.x +
-                         (sample == 1 || sample == 3 ? pixel_dims.x : 0);
-        plane_point.y += (static_cast<float>(y) / sdl::kWindowHeight - 0.5) *
-                             view_plane_dims.y +
-                         (sample == 2 || sample == 3 ? pixel_dims.y : 0);
-        math::Ray ray(camera_pos, plane_point - camera_pos);
+        Ray ray = GetWorldSpaceRayFromImageSpace(
+            camera, {static_cast<float>(x) / sdl::kWindowWidth,
+                     static_cast<float>(y) / sdl::kWindowHeight});
         math::RaySphereIntersection isect =
             math::RaySphereIntersect(ray, sphere);
         if (isect.n == 1 && isect.t1 > 0) {
