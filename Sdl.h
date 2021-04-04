@@ -1,13 +1,13 @@
 #pragma once
 
-#include <stdlib.h>
 #include <SDL2/SDL.h>
+#include <stdlib.h>
 
 #include "Math.h"
 
 namespace sdl {
 
-constexpr uint16_t kWindowWidth = 1000;
+constexpr uint16_t kWindowWidth = 800;
 constexpr uint16_t kWindowHeight = 600;
 
 enum class EventType {
@@ -15,8 +15,8 @@ enum class EventType {
   kSdlWantsQuit,
 };
 
-extern SDL_Renderer *renderer;
-extern SDL_Window *window;
+extern SDL_Renderer* renderer;
+extern SDL_Window* window;
 
 void Initialize();
 
@@ -30,4 +30,4 @@ EventType PollEvent();
 
 void Destroy();
 
-}
+}  // namespace sdl

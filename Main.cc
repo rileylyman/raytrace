@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <limits>
 #include <vector>
 
 #include "Math.h"
@@ -8,11 +9,9 @@
 
 using namespace math;
 
-constexpr float kPi = 3.1415;
-
 struct Camera {
   Camera()
-      : fov_degrees(60), position{0, 0, -100}, forward{0, 0, 1}, up{0, 1, 0} {
+      : fov_degrees(60), position{0, 0, 100}, forward{0, 0, -1}, up{0, 1, 0} {
     aspect_ratio = static_cast<float>(sdl::kWindowHeight) /
                    static_cast<float>(sdl::kWindowWidth);
   }
@@ -25,8 +24,7 @@ struct Camera {
 };
 
 Mat4x4<float> WorldToCamera(Camera camera) {
-  return glm::lookAt(camera.position,
-                     glm::normalize(camera.position + camera.forward),
+  return glm::lookAt(camera.position, camera.position + camera.forward,
                      camera.up);
 }
 
@@ -58,6 +56,7 @@ Ray GetWorldSpaceRayFromImageSpace(Camera camera, Vec2<float> pixel_pos) {
 
 struct Scene {
   std::vector<math::Sphere> spheres;
+  std::vector<math::Triangle> triangles;
   Camera camera;
 };
 
@@ -66,16 +65,19 @@ int main(void) {
   math::Vec4<float> sphere_color = {.8, .4, .2, 1};
 
   sdl::Initialize();
-  sdl::ClearScreen(clear_color);
+  sdl::ClearScreen({0, 0, 0, 1});
 
   Camera camera;
   math::Sphere sphere({0, 0, 0}, 20);
-  math::Vec3<float> camera_pos = {0, 0, -200};
-  math::Vec3<float> view_plane_pos = {0, 0, -90};
-  math::Vec2<float> view_plane_dims = {100, 100};
-
-  math::Vec2<float> pixel_dims = {view_plane_dims.x / sdl::kWindowWidth,
-                                  view_plane_dims.y / sdl::kWindowHeight};
+  Scene scene;
+  scene.camera = camera;
+  scene.spheres = {
+      {{0, 0, 0}, 20},    {{-40, 0, 0}, 15},   {{20, 0, 0}, 15},
+      {{0, 40, -10}, 15}, {{0, -20, -10}, 15},
+  };
+  scene.triangles = {
+      {{30, 0, 0}, {-30, 0, 0}, {0, 30, 0}},
+  };
 
   for (uint16_t x = 0; x < sdl::kWindowWidth; x++) {
     for (uint16_t y = 0; y < sdl::kWindowHeight; y++) {
@@ -85,23 +87,49 @@ int main(void) {
         Ray ray = GetWorldSpaceRayFromImageSpace(
             camera, {static_cast<float>(x) / sdl::kWindowWidth,
                      static_cast<float>(y) / sdl::kWindowHeight});
-        math::RaySphereIntersection isect =
-            math::RaySphereIntersect(ray, sphere);
-        if (isect.n == 1 && isect.t1 > 0) {
-          math::Vec3<float> isect_point = ray.origin + ray.direction * isect.t1;
+
+        const Sphere* isected_sphere = nullptr;
+        const Triangle* isected_triangle = nullptr;
+        float smallest_t = std::numeric_limits<float>::max();
+        Vec3<float> normal;
+        for (const Sphere& sphere : scene.spheres) {
+          math::RaySphereIntersection isect =
+              math::RaySphereIntersect(ray, sphere);
+          if (isect.n == 1) {
+            if (smallest_t > isect.t1) {
+              smallest_t = isect.t1;
+              isected_sphere = &sphere;
+              isected_triangle = nullptr;
+            }
+          } else if (isect.n == 2) {
+            if (smallest_t > isect.t1 || smallest_t > isect.t2) {
+              smallest_t = glm::min(isect.t1, isect.t2);
+              isected_sphere = &sphere;
+              isected_triangle = nullptr;
+            }
+          }
+        }
+        for (const Triangle& triangle : scene.triangles) {
+          RayTriangleIntersection isect = RayTriangleIntersect(ray, triangle);
+          if (isect.success && smallest_t > isect.t && isect.t > 0) {
+            smallest_t = isect.t;
+            isected_sphere = nullptr;
+            isected_triangle = &triangle;
+            normal = isect.normal;
+          }
+        }
+
+        if (isected_sphere != nullptr) {
+          math::Vec3<float> isect_point =
+              ray.origin + ray.direction * smallest_t;
           math::Vec3<float> normal =
-              glm::normalize(glm::max(isect_point, sphere.origin) -
-                             glm::min(isect_point, sphere.origin));
+              glm::normalize(glm::max(isect_point, isected_sphere->origin) -
+                             glm::min(isect_point, isected_sphere->origin));
           math::Vec4<float> normal_color =
               math::Vec4<float>(normal.x, normal.y, normal.z, 1.0);
           final_color =
               final_color + normal_color / static_cast<float>(kNumSamples);
-        } else if (isect.n == 2 && (isect.t1 > 0 || isect.t2 > 0)) {
-          math::Vec3<float> isect_point =
-              ray.origin + ray.direction * glm::min(isect.t1, isect.t2);
-          math::Vec3<float> normal =
-              glm::normalize(glm::max(isect_point, sphere.origin) -
-                             glm::min(isect_point, sphere.origin));
+        } else if (isected_triangle != nullptr) {
           math::Vec4<float> normal_color =
               math::Vec4<float>(normal.x, normal.y, normal.z, 1.0);
           final_color =

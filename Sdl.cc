@@ -17,8 +17,9 @@ void ClearScreen(math::Vec4<uint8_t> color) {
 }
 
 void SetPixel(math::Vec2<uint16_t> pixel, math::Vec4<float> color) {
-  SDL_SetRenderDrawColor(renderer, color.x * 255, color.y * 255, color.z * 255, color.w * 255);
-  SDL_RenderDrawPoint(renderer, pixel.x, pixel.y);
+  SDL_SetRenderDrawColor(renderer, abs(color.x) * 255, abs(color.y) * 255,
+                         abs(color.z) * 255, abs(color.w) * 255);
+  SDL_RenderDrawPoint(renderer, pixel.x, kWindowHeight - pixel.y - 1);
 }
 
 void Show() {
