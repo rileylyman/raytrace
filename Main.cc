@@ -11,10 +11,12 @@
 using namespace math;
 constexpr double kEpsD = 0.01;
 constexpr double kPi = 3.1415;
+constexpr double kContProb = 0.9;
+constexpr int kMaxSteps = 5;
 
 struct Camera {
   Camera()
-      : fov_degrees(60), position{0, 50, 200}, forward{0, 0, -1}, up{0, 1, 0} {
+      : fov_degrees(60), position{0, 50, 120}, forward{0, 0, -1}, up{0, 1, 0} {
     aspect_ratio = static_cast<double>(sdl::kWindowHeight) /
                    static_cast<double>(sdl::kWindowWidth);
   }
@@ -133,7 +135,7 @@ Vec4<double> SampleLights(SceneIntersection scene_isect, Vec3<double> wo) {
   }
   Vec4<double> result = {0, 0, 0, 1};
   // return {1, 0, 0, 1};
-  int N = 20;
+  int N = 5;
   for (int i = 0; i < N; i++) {
     Light* light =
         &gScene
@@ -146,7 +148,7 @@ Vec4<double> SampleLights(SceneIntersection scene_isect, Vec3<double> wo) {
         (1.0 - r3) * light->min_corner.z + r3 * light->max_corner.z};
 
     Vec3<double> wi = point_on_light - scene_isect.isect.isect_point;
-    double wi_magnitude = glm::dot(wi, wi) / 33;
+    double wi_magnitude = glm::dot(wi, wi) / 63;
     wi = glm::normalize(wi);
 
     SceneIntersection light_isect = RaySceneIntersect(
@@ -163,7 +165,7 @@ Vec4<double> SampleLights(SceneIntersection scene_isect, Vec3<double> wo) {
     z_edge = z_edge == 0 ? 1 : z_edge;
     double surface_area = x_edge * y_edge * z_edge;
 
-    Vec4<double> emission = scene_isect.object->color;  // light->object.color;
+    Vec4<double> emission = scene_isect.object->color * light->object.color;
     double costheta =
         abs(glm::dot(glm::normalize(scene_isect.isect.isect_normal), wi));
     double costheta_prime = abs(glm::dot(
@@ -185,16 +187,33 @@ Vec4<double> SampleLights(SceneIntersection scene_isect, Vec3<double> wo) {
 }
 
 Vec4<double> AtLeastOneBounceRadiance(SceneIntersection scene_isect,
-                                      Vec3<double> wo) {
+                                      Vec3<double> wo, int* step) {
+  if (!scene_isect.isect.valid) {
+    return {0, 0, 0, 0};
+  }
+  if (scene_isect.is_light) {
+    return scene_isect.light->object.color;
+  }
   Vec4<double> L = SampleLights(scene_isect, wo);
 
   // Get sample direction wi and prob pdf
+  double phi = SampleUniform() * 2 * kPi;
+  double theta = SampleUniform() * kPi;
+  Vec3<double> wi = {sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta)};
+
+  double costheta = abs(glm::dot(glm::normalize(scene_isect.isect.isect_normal),
+                                 glm::normalize(wi)));
+
   // intersect scene again
+  Ray wi_ray(scene_isect.isect.isect_point + wi * kEpsD, wi);
+  SceneIntersection wi_isect = RaySceneIntersect(wi_ray, gScene);
+
   // get continuation prob cpdf
-  // if continuing:
-  //   L += AtLeastOneBounceRadiance(new_scene_isect, wi) * brdf(wi, wo) *
-  //   costheta / pdf / cpdf;
-  // return L
+  if (SampleUniform() < kContProb && *step < kMaxSteps) {
+    *step += 1;
+    L += AtLeastOneBounceRadiance(wi_isect, wi, step) * costheta * (2 * kPi) /
+         (2 * kPi) / kContProb;
+  }
   return L;
 }
 
@@ -202,7 +221,7 @@ Vec4<double> EstRadianceIn(Camera camera, Vec2<double> pixel_pos) {
   Ray ray = GetWorldSpaceRayFromImageSpace(camera, pixel_pos);
 
   Vec4<double> result = {0, 0, 0, 1};
-  int N = 1;
+  int N = 8;
   for (int i = 0; i < N; i++) {
     SceneIntersection scene_isect = RaySceneIntersect(ray, gScene);
 
@@ -213,10 +232,12 @@ Vec4<double> EstRadianceIn(Camera camera, Vec2<double> pixel_pos) {
     if (scene_isect.is_light) {
       result += ZeroBounceRadiance(scene_isect);
     } else {
+      int number_of_steps = 1;
+      Vec4<double> recurse = AtLeastOneBounceRadiance(
+          scene_isect, camera.position - scene_isect.isect.isect_point,
+          &number_of_steps);
       result +=
-          ZeroBounceRadiance(scene_isect) +
-          AtLeastOneBounceRadiance(
-              scene_isect, camera.position - scene_isect.isect.isect_point);
+          ZeroBounceRadiance(scene_isect) + recurse * (1.0 / number_of_steps);
     }
   }
 
