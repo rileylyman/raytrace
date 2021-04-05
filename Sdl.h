@@ -22,7 +22,7 @@ void Initialize();
 
 void ClearScreen(math::Vec4<uint8_t> color);
 
-void SetPixel(math::Vec2<uint16_t> pixel, math::Vec4<float> color);
+void SetPixel(math::Vec2<uint16_t> pixel, math::Vec4<double> color);
 
 void Show();
 

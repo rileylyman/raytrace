@@ -4,16 +4,23 @@
 
 namespace math {
 
+std::default_random_engine gGenerator;
+std::uniform_real_distribution<double> gDistribution(0.0, 1.0);
+
+double SampleUniform() {
+  return gDistribution(gGenerator);
+}
+
 Intersection RaySphereIntersect(const Ray& ray, const Sphere& sphere) {
   Intersection isect;
 
-  float a = glm::dot(ray.direction, ray.direction);
-  float b = 2 * glm::dot((ray.origin - sphere.origin), ray.direction);
-  float c =
+  double a = glm::dot(ray.direction, ray.direction);
+  double b = 2 * glm::dot((ray.origin - sphere.origin), ray.direction);
+  double c =
       glm::dot((ray.origin - sphere.origin), (ray.origin - sphere.origin)) -
       sphere.radius * sphere.radius;
 
-  float radical = b * b - 4 * a * c;
+  double radical = b * b - 4 * a * c;
   if (radical < 0.0) {
     isect.valid = false;
   } else if (radical == 0) {
@@ -22,8 +29,8 @@ Intersection RaySphereIntersect(const Ray& ray, const Sphere& sphere) {
   } else {
     isect.valid = true;
 
-    float t1 = (-b - sqrt(b * b - 4 * a * c)) / (2 * a);
-    float t2 = (-b + sqrt(b * b - 4 * a * c)) / (2 * a);
+    double t1 = (-b - sqrt(b * b - 4 * a * c)) / (2 * a);
+    double t2 = (-b + sqrt(b * b - 4 * a * c)) / (2 * a);
 
     if (t1 > 0 && t1 < t2) {
       isect.t = t1;
@@ -51,14 +58,14 @@ Intersection RayPlaneIntersect(const Ray& ray, const Plane& plane) {
 }
 
 Intersection RayTriangleIntersect(const Ray& ray, const Triangle& tri) {
-  Vec3<float> e1 = tri.p1 - tri.p0;
-  Vec3<float> e2 = tri.p2 - tri.p0;
-  Vec3<float> s = ray.origin - tri.p0;
-  Vec3<float> s1 = glm::cross(ray.direction, e2);
-  Vec3<float> s2 = glm::cross(s, e1);
+  Vec3<double> e1 = tri.p1 - tri.p0;
+  Vec3<double> e2 = tri.p2 - tri.p0;
+  Vec3<double> s = ray.origin - tri.p0;
+  Vec3<double> s1 = glm::cross(ray.direction, e2);
+  Vec3<double> s2 = glm::cross(s, e1);
 
-  Vec3<float> result =
-      (1 / glm::dot(s1, e1)) * Vec3<float>{glm::dot(s2, e2), glm::dot(s1, s),
+  Vec3<double> result =
+      (1 / glm::dot(s1, e1)) * Vec3<double>{glm::dot(s2, e2), glm::dot(s1, s),
                                            glm::dot(s2, ray.direction)};
 
   Intersection isect;

@@ -16,9 +16,18 @@ void ClearScreen(math::Vec4<uint8_t> color) {
   SDL_RenderClear(renderer);
 }
 
-void SetPixel(math::Vec2<uint16_t> pixel, math::Vec4<float> color) {
-  SDL_SetRenderDrawColor(renderer, abs(color.x) * 255, abs(color.y) * 255,
-                         abs(color.z) * 255, abs(color.w) * 255);
+void SetPixel(math::Vec2<uint16_t> pixel, math::Vec4<double> color) {
+  using namespace math;
+  Vec3<double> rgb = Vec3<double>{color.x, color.y, color.z};
+  if (rgb.x > 1 || rgb.y > 1 || rgb.z > 1) {
+    double max_comp = glm::max(rgb.x, glm::max(rgb.y, rgb.z));
+    rgb.x = rgb.x / max_comp;
+    rgb.y = rgb.y / max_comp;
+    rgb.z = rgb.z / max_comp;
+
+  }
+  SDL_SetRenderDrawColor(renderer, abs(rgb.x) * 255, abs(rgb.y) * 255,
+                         abs(rgb.z) * 255, abs(color.w) * 255);
   SDL_RenderDrawPoint(renderer, pixel.x, kWindowHeight - pixel.y - 1);
 }
 

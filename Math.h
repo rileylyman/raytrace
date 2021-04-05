@@ -6,6 +6,7 @@
 #include <glm/geometric.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <random>
 
 namespace math {
 
@@ -18,39 +19,41 @@ using Vec4 = glm::vec<4, T, glm::defaultp>;
 template <typename T>
 using Mat4x4 = glm::mat<4, 4, T, glm::defaultp>;
 
-struct Ray {
-  Ray(Vec3<float> o, Vec3<float> d) : origin(o), direction(d) {}
+double SampleUniform();
 
-  Vec3<float> origin;
-  Vec3<float> direction;
+struct Ray {
+  Ray(Vec3<double> o, Vec3<double> d) : origin(o), direction(d) {}
+
+  Vec3<double> origin;
+  Vec3<double> direction;
 };
 
 struct Sphere {
-  Sphere(Vec3<float> o, float r) : origin(o), radius(r) {}
+  Sphere(Vec3<double> o, double r) : origin(o), radius(r) {}
 
-  Vec3<float> origin;
-  float radius;
+  Vec3<double> origin;
+  double radius;
 };
 
 struct Plane {
-  Plane(Vec3<float> pos, Vec3<float> n) : position(pos), normal(n) {}
+  Plane(Vec3<double> pos, Vec3<double> n) : position(pos), normal(n) {}
 
-  Vec3<float> position;
-  Vec3<float> normal;
+  Vec3<double> position;
+  Vec3<double> normal;
 };
 
 struct Triangle {
-  Triangle(Vec3<float> p0, Vec3<float> p1, Vec3<float> p2)
+  Triangle(Vec3<double> p0, Vec3<double> p1, Vec3<double> p2)
       : p0(p0), p1(p1), p2(p2) {}
 
-  Vec3<float> p0, p1, p2;
+  Vec3<double> p0, p1, p2;
 };
 
 struct Intersection {
   bool valid;
-  float t;
-  Vec3<float> isect_point;
-  Vec3<float> isect_normal;
+  double t;
+  Vec3<double> isect_point;
+  Vec3<double> isect_normal;
 };
 
 Intersection RaySphereIntersect(const Ray& ray, const Sphere& sphere);

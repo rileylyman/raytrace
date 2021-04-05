@@ -12,23 +12,23 @@ enum class ObjectType {
 };
 
 struct Object {
-  Object(ObjectType type, bool is_emissive, Vec4<float> color,
+  Object(ObjectType type, bool is_emissive, Vec4<double> color,
          std::vector<Triangle> triangles)
       : type(type),
         is_emissive(is_emissive),
         color(color),
         triangles(triangles) {}
 
-  Object(ObjectType type, bool is_emissive, Vec4<float> color, Sphere sphere)
+  Object(ObjectType type, bool is_emissive, Vec4<double> color, Sphere sphere)
       : type(type), is_emissive(is_emissive), color(color), sphere(sphere) {}
 
   ObjectType type;
 
   bool is_emissive;
-  Vec4<float> color;
+  Vec4<double> color;
 
-    std::vector<Triangle> triangles;
-    Sphere sphere = {{0,0,0}, 0};
+  std::vector<Triangle> triangles;
+  Sphere sphere = {{0, 0, 0}, 0};
 };
 
 Intersection RayObjectIntersect(const Ray& ray, const Object& object);
