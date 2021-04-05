@@ -9,7 +9,7 @@
 #include "Sdl.h"
 
 using namespace math;
-constexpr double kEpsD = 0.001;
+constexpr double kEpsD = 0.01;
 constexpr double kPi = 3.1415;
 
 struct Camera {
@@ -146,11 +146,11 @@ Vec4<double> SampleLights(SceneIntersection scene_isect, Vec3<double> wo) {
         (1.0 - r3) * light->min_corner.z + r3 * light->max_corner.z};
 
     Vec3<double> wi = point_on_light - scene_isect.isect.isect_point;
-    double wi_magnitude = glm::dot(wi, wi);
+    double wi_magnitude = glm::dot(wi, wi) / 33;
     wi = glm::normalize(wi);
 
     SceneIntersection light_isect = RaySceneIntersect(
-        Ray(scene_isect.isect.isect_point, wi + kEpsD * wi), gScene);
+        Ray(scene_isect.isect.isect_point + kEpsD * wi, wi), gScene);
     if (!light_isect.is_light || light_isect.light != light) {
       continue;
     }
@@ -161,7 +161,7 @@ Vec4<double> SampleLights(SceneIntersection scene_isect, Vec3<double> wo) {
     y_edge = y_edge == 0 ? 1 : y_edge;
     double z_edge = abs(light->max_corner.z - light->min_corner.z);
     z_edge = z_edge == 0 ? 1 : z_edge;
-    double surface_area = x_edge * y_edge * z_edge / 2;
+    double surface_area = x_edge * y_edge * z_edge;
 
     Vec4<double> emission = scene_isect.object->color;  // light->object.color;
     double costheta =
@@ -177,7 +177,7 @@ Vec4<double> SampleLights(SceneIntersection scene_isect, Vec3<double> wo) {
       //     surface_area, wi_magnitude);
     }
     result += emission * costheta * costheta_prime * surface_area / (2 * kPi) /
-              sqrt(wi_magnitude);
+              wi_magnitude;
   }
   return result * (1.0 / N);
 
@@ -202,7 +202,7 @@ Vec4<double> EstRadianceIn(Camera camera, Vec2<double> pixel_pos) {
   Ray ray = GetWorldSpaceRayFromImageSpace(camera, pixel_pos);
 
   Vec4<double> result = {0, 0, 0, 1};
-  int N = 2;
+  int N = 1;
   for (int i = 0; i < N; i++) {
     SceneIntersection scene_isect = RaySceneIntersect(ray, gScene);
 
@@ -235,8 +235,8 @@ int main(void) {
   gScene.lights = {
       // light
       {LightType::kAreaLight,
-       {-25, 74, -50},
-       {25, 74, -25},
+       {-25, 74.99, -50},
+       {25, 74.99, -25},
        {ObjectType::kTriangleMesh,
         true,
         {1, 1, 1, 1},
@@ -246,9 +246,9 @@ int main(void) {
         }}},
   };
   gScene.objects = {
-      {ObjectType::kSphere, false, {1, 0, 0, 1}, {{30, 15, -20}, 20}},
-      {ObjectType::kSphere, false, {1, 0, 0, 1}, {{-30, 15, -30}, 20}},
-      {ObjectType::kSphere, false, {1, 0, 0, 1}, {{-75, 75, -75}, 20}},
+      {ObjectType::kSphere, false, {0.7, 0.7, 0.7, 1}, {{30, 15, -20}, 20}},
+      {ObjectType::kSphere, false, {0.7, 0.7, 0.7, 1}, {{-30, 15, -30}, 20}},
+      {ObjectType::kSphere, false, {0.7, 0.7, 0.7, 1}, {{-75, 75, -75}, 20}},
       // floor
       {ObjectType::kTriangleMesh,
        false,
